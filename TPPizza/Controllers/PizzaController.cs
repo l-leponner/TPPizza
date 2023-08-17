@@ -1,6 +1,10 @@
 ﻿using BO;
+using Humanizer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Collections;
+using TPPizza.Models;
 
 namespace TPPizza.Controllers
 {
@@ -25,27 +29,37 @@ namespace TPPizza.Controllers
                     new Pate{ Id=4,Nom="Pate épaisse, base tomate"}
                 };
 
-        public static List<Pizza> ListePizzas => new List<Pizza>
+        public static List<Pizza> ListePizzas = new List<Pizza>
         {
             new Pizza { Id = 1, Nom= "Grasgras", 
-                Pate=PatesDisponibles.Where(p => p.Id == 3).Single()}
+                Pate=PatesDisponibles.Where(p => p.Id == 3).Single(),
+            Ingredients=IngredientsDisponibles},
+            new Pizza { Id = 2, Nom= "Nope",
+                Pate=PatesDisponibles.Where(p => p.Id == 2).Single(),
+            Ingredients=IngredientsDisponibles.Where(i => i.Id > 5).Select(i => i).ToList()}
         };
         // GET: PizzaController
         public ActionResult Index()
         {
-            return View();
+            return View(ListePizzas);
         }
 
         // GET: PizzaController/Details/5
         public ActionResult Details(int id)
         {
-            return View();
+            Pizza? pizza = GetPizza(id);
+            if(pizza is null)
+            {
+                return View(nameof(Index));
+            }
+            return View(pizza);
         }
 
         // GET: PizzaController/Create
         public ActionResult Create()
         {
-            return View();
+            
+            return View(PatesDisponibles, IngredientsDisponibles);
         }
 
         // POST: PizzaController/Create
@@ -55,6 +69,7 @@ namespace TPPizza.Controllers
         {
             try
             {
+                
                 return RedirectToAction(nameof(Index));
             }
             catch
@@ -66,7 +81,12 @@ namespace TPPizza.Controllers
         // GET: PizzaController/Edit/5
         public ActionResult Edit(int id)
         {
-            return View();
+            Pizza? pizza = GetPizza(id);
+            if (pizza is null)
+            {
+                return View(nameof(Index));
+            }
+            return View(pizza);
         }
 
         // POST: PizzaController/Edit/5
@@ -87,7 +107,12 @@ namespace TPPizza.Controllers
         // GET: PizzaController/Delete/5
         public ActionResult Delete(int id)
         {
-            return View();
+            Pizza? pizza = GetPizza(id);
+            if (pizza is null)
+            {
+                return View(nameof(Index));
+            }
+            return View(pizza);
         }
 
         // POST: PizzaController/Delete/5
@@ -97,12 +122,23 @@ namespace TPPizza.Controllers
         {
             try
             {
+                Pizza? pizza = GetPizza(id);
+                if (pizza is null)
+                {
+                    throw new Exception("Pizza introuvable ! :(");
+                }
+                ListePizzas.Remove(pizza);
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View();
+                return View(nameof(Index), ListePizzas);
             }
+        }
+
+        private static Pizza? GetPizza(int id)
+        {
+            return ListePizzas.SingleOrDefault(p => p.Id == id);
         }
     }
 }
