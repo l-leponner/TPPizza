@@ -74,8 +74,7 @@ namespace TPPizza.Controllers
             vm.PatesSelect = new SelectList(
                     PatesDisponibles, 
                     nameof(PizzaCreationEditionDTO.Pate.Id), 
-                    nameof(PizzaCreationEditionDTO.Pate.Nom))
-                .ToList();
+                    nameof(PizzaCreationEditionDTO.Pate.Nom));
             vm.IngredientsSelect = new MultiSelectList(
                 IngredientsDisponibles,
                 nameof(Ingredient.Id),
@@ -97,7 +96,7 @@ namespace TPPizza.Controllers
                 } else
                 {
                     Pizza createdPizza = new Pizza();
-                    int id = ListePizzas.Last().Id + 1;
+                    int id = ListePizzas.Any() ? ListePizzas.Last().Id + 1 : 1;
                     string nom = collection["Nom"];
                     Pate pate = PatesDisponibles.Single(p => p.Id == int.Parse(collection["Pate"]));
                     List<Ingredient> ingredients = new List<Ingredient>();
@@ -136,8 +135,7 @@ namespace TPPizza.Controllers
                         PatesDisponibles,
                         nameof(PizzaCreationEditionDTO.Pate.Id),
                         nameof(PizzaCreationEditionDTO.Pate.Nom),
-                        pizza.Pate.Id)
-                    .ToList();
+                        pizza.Pate.Id);
                 List<int> ingredientsId = new List<int>();
                 foreach (Ingredient ingredient in pizza.Ingredients)
                 {

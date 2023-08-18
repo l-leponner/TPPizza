@@ -15,11 +15,7 @@ namespace TPPizza.Models
         [Required(ErrorMessage = "Vous devez sélectionner une pate pour votre pizza !", AllowEmptyStrings = false)]
         public Pate Pate { get; set; }
         public List<Pate> Pates { get; set; }
-        //public SelectList PatesSelect { get; set; }
-        //    = new SelectList(items: Pates
-        //        //, dataTextField: nameof(Pate.Id), dataValueField: nameof(Pate.Nom)
-        //        );
-        public List<SelectListItem> PatesSelect { get; set; }
+        public SelectList PatesSelect { get; set; }
         public MultiSelectList IngredientsSelect { get; set; }
         [Required(ErrorMessage = "Vous devez sélectionner au moins un ingrédient pour votre pizza !", AllowEmptyStrings = false)]
         public List<Ingredient> Ingredients { get; set; }
