@@ -1,67 +1,30 @@
 ﻿using BO;
-using Humanizer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Collections;
-using System.Collections.Generic;
 using TPPizza.Models;
 
 namespace TPPizza.Controllers
 {
     public class PizzaController : Controller
     {
-
-        public static List<Ingredient> IngredientsDisponibles => new List<Ingredient> {
-                    new Ingredient{Id=1,Nom="Mozzarella"},
-                    new Ingredient{Id=2,Nom="Jambon"},
-                    new Ingredient{Id=3,Nom="Tomate"},
-                    new Ingredient{Id=4,Nom="Oignon"},
-                    new Ingredient{Id=5,Nom="Cheddar"},
-                    new Ingredient{Id=6,Nom="Saumon"},
-                    new Ingredient{Id=7,Nom="Champignon"},
-                    new Ingredient{Id=8,Nom="Poulet"}
-                };
-
-        public static List<Pate> PatesDisponibles => new List<Pate> {
-                    new Pate{ Id=1,Nom="Pate fine, base crême"},
-                    new Pate{ Id=2,Nom="Pate fine, base tomate"},
-                    new Pate{ Id=3,Nom="Pate épaisse, base crême"},
-                    new Pate{ Id=4,Nom="Pate épaisse, base tomate"}
-                };
-
-        public static List<Pizza> ListePizzas = new List<Pizza>
-        {
-            new Pizza { Id = 1, Nom= "Grasgras", 
-                Pate=PatesDisponibles.Where(p => p.Id == 3).Single(),
-            Ingredients=IngredientsDisponibles},
-            new Pizza { Id = 2, Nom= "Nope",
-                Pate=PatesDisponibles.Where(p => p.Id == 2).Single(),
-            Ingredients=IngredientsDisponibles.Where(i => i.Id > 5).Select(i => i).ToList()}
+        private static List<Pizza> pizzas = new List<Pizza> {
+            new Pizza{Id = 1, Nom = "Calzone", Pate = Pizza.PatesDisponibles[1], Ingredients = new List<Ingredient>{ Pizza.IngredientsDisponibles[0], Pizza.IngredientsDisponibles[1]} },
+            new Pizza{Id = 2, Nom = "Reine", Pate = Pizza.PatesDisponibles[0], Ingredients = new List<Ingredient>{ Pizza.IngredientsDisponibles[1], Pizza.IngredientsDisponibles[3], Pizza.IngredientsDisponibles[4]} },
         };
 
-        //public static List<SelectListItem> GetPatesSelect()
-        //{
-        //    List < SelectListItem > PatesSelect = new List <SelectListItem> ();
-        //    foreach (var pate in PatesDisponibles)
-        //    {
-        //        PatesSelect.Add();
-        //    }
-        //    return;
-        //}
         // GET: PizzaController
         public ActionResult Index()
         {
-            return View(ListePizzas);
+            return View(pizzas);
         }
 
         // GET: PizzaController/Details/5
         public ActionResult Details(int id)
         {
-            Pizza? pizza = GetPizza(id);
-            if(pizza is null)
+            Pizza? pizza = pizzas.Find(p => p.Id == id);
+            if (pizza == null)
             {
-                return View(nameof(Index));
+                return NotFound();
             }
             return View(pizza);
         }
@@ -69,141 +32,92 @@ namespace TPPizza.Controllers
         // GET: PizzaController/Create
         public ActionResult Create()
         {
-
-            var vm = new PizzaCreationEditionDTO();
-            vm.PatesSelect = new SelectList(
-                    PatesDisponibles, 
-                    nameof(PizzaCreationEditionDTO.Pate.Id), 
-                    nameof(PizzaCreationEditionDTO.Pate.Nom));
-            vm.IngredientsSelect = new MultiSelectList(
-                IngredientsDisponibles,
-                nameof(Ingredient.Id),
-                nameof(Ingredient.Nom)
-                );
-            return View(vm);
+            return View(new PizzaVM());
         }
 
         // POST: PizzaController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([FromForm] IFormCollection collection)
+        public ActionResult Create(PizzaVM pizzaVM)
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (Valider(pizzaVM))
                 {
-                    return View(collection);
-                } else
-                {
-                    Pizza createdPizza = new Pizza();
-                    int id = ListePizzas.Any() ? ListePizzas.Last().Id + 1 : 1;
-                    string nom = collection["Nom"];
-                    Pate pate = PatesDisponibles.Single(p => p.Id == int.Parse(collection["Pate"]));
-                    List<Ingredient> ingredients = new List<Ingredient>();
-                    foreach (string ingredientId in collection["Ingredients"])
+                    pizzas.Add(new Pizza
                     {
-                        ingredients.Add(IngredientsDisponibles.Single(i => i.Id == int.Parse(ingredientId)));
-                    }
-                    createdPizza.Id = id;
-                    createdPizza.Nom = nom;
-                    createdPizza.Pate = pate;
-                    createdPizza.Ingredients = ingredients;
-
-                    ListePizzas.Add(createdPizza);
+                        Id = pizzas.Any() ? pizzas.Max(p => p.Id) + 1 : 1,
+                        Nom = pizzaVM.Nom,
+                        Pate = Pizza.PatesDisponibles.First(p => p.Id == pizzaVM.IdPate),
+                        Ingredients = Pizza.IngredientsDisponibles.Where(i => pizzaVM.IdsIngredients.Contains(i.Id)).ToList()
+                    });
+                    return RedirectToAction(nameof(Index));
                 }
-                return RedirectToAction(nameof(Index));
+                else
+                {
+                    return View(pizzaVM);
+                }
             }
             catch
             {
-                return View();
+                return View(pizzaVM);
             }
         }
 
         // GET: PizzaController/Edit/5
         public ActionResult Edit(int id)
         {
-            Pizza? pizza = GetPizza(id);
-            if (pizza is null)
+            Pizza? pizza = pizzas.Find(p => p.Id == id);
+            if (pizza == null)
             {
-                return View(nameof(Index));
-            } else
-            {
-                var vm = new PizzaCreationEditionDTO();
-                vm.Id = pizza.Id;
-                vm.Nom = pizza.Nom;
-                vm.PatesSelect = new SelectList(
-                        PatesDisponibles,
-                        nameof(PizzaCreationEditionDTO.Pate.Id),
-                        nameof(PizzaCreationEditionDTO.Pate.Nom),
-                        pizza.Pate.Id);
-                List<int> ingredientsId = new List<int>();
-                foreach (Ingredient ingredient in pizza.Ingredients)
-                {
-                    ingredientsId.Add(ingredient.Id);
-                }
-                vm.IngredientsSelect = new MultiSelectList(
-                    IngredientsDisponibles,
-                    nameof(Ingredient.Id),
-                    nameof(Ingredient.Nom),
-                    ingredientsId
-                    );
-                return View(vm);
+                return NotFound();
             }
+            return View(new PizzaVM
+            {
+                Id = pizza.Id,
+                Nom = pizza.Nom,
+                IdPate = pizza.Pate.Id,
+                IdsIngredients = pizza.Ingredients.Select(i => i.Id).ToList()
+            });
         }
 
         // POST: PizzaController/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public ActionResult Edit(PizzaVM pizzaVM)
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (Valider(pizzaVM))
                 {
-                    return View(collection);
+                    Pizza? pizza = pizzas.Find(p => p.Id == pizzaVM.Id);
+                    if (pizza == null)
+                    {
+                        return NotFound();
+                    }
+                    pizza.Nom = pizzaVM.Nom;
+                    pizza.Pate = Pizza.PatesDisponibles.First(p => p.Id == pizzaVM.IdPate);
+                    pizza.Ingredients = Pizza.IngredientsDisponibles.Where(i => pizzaVM.IdsIngredients.Contains(i.Id)).ToList();
+                    return RedirectToAction(nameof(Index));
                 }
                 else
                 {
-                    Pizza? editedPizza = GetPizza(id);
-
-                    if (editedPizza is null)
-                    {
-                        return View(nameof(Index));
-                    }
-                    else
-                    {
-                        string nom = collection["Nom"];
-                        Pate pate = PatesDisponibles.Single(p => p.Id == int.Parse(collection["Pate"]));
-                        List<Ingredient> ingredients = new List<Ingredient>();
-                        foreach (string ingredientId in collection["Ingredients"])
-                        {
-                            ingredients.Add(IngredientsDisponibles.Single(i => i.Id == int.Parse(ingredientId)));
-                        }
-                        
-                        editedPizza.Nom = nom;
-                        editedPizza.Pate = pate;
-                        editedPizza.Ingredients = ingredients;
-
-                        int index = ListePizzas.FindIndex(p => p.Id == editedPizza.Id);
-                        ListePizzas[index] = editedPizza;
-                    }
-
+                    return View(pizzaVM);
                 }
-                return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View();
+                return View(pizzaVM);
             }
         }
 
         // GET: PizzaController/Delete/5
         public ActionResult Delete(int id)
         {
-            Pizza? pizza = GetPizza(id);
-            if (pizza is null)
+            Pizza? pizza = pizzas.Find(p => p.Id == id);
+            if (pizza == null)
             {
-                return View(nameof(Index));
+                return NotFound();
             }
             return View(pizza);
         }
@@ -215,23 +129,72 @@ namespace TPPizza.Controllers
         {
             try
             {
-                Pizza? pizza = GetPizza(id);
-                if (pizza is null)
+                Pizza? pizza = pizzas.Find(p => p.Id == id);
+                if (pizza == null)
                 {
-                    throw new Exception("Pizza introuvable ! :(");
+                    return NotFound();
                 }
-                ListePizzas.Remove(pizza);
+                pizzas.Remove(pizza);
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View(nameof(Index), ListePizzas);
+                return View();
             }
         }
 
-        private static Pizza? GetPizza(int id)
+        [AcceptVerbs("GET", "POST")]
+        public ActionResult VerifNomPizzaUnique(string nom, int id)
         {
-            return ListePizzas.SingleOrDefault(p => p.Id == id);
+            if (NomPizzaExistant(nom, id))
+                return Json("Une autre pizza porte déjà ce nom");
+            else
+                return Json(true);
+        }
+
+        [AcceptVerbs("GET", "POST")]
+        public ActionResult VerifIngredientsOriginaux(string idsIngredients, int id)
+        {
+            List<int> ids = new List<int>();
+            foreach (string idI in idsIngredients.Split(','))
+            {
+                ids.Add(int.Parse(idI));
+            }
+            if (MemesIngredients(ids, id))
+                return Json("Une autre pizza utilise exactement ces mêmes ingrédients");
+            else
+                return Json(true);
+        }
+
+        private bool Valider(PizzaVM pizzaVM)
+        {
+            if (!ModelState.IsValid)
+                return false;
+
+            if (NomPizzaExistant(pizzaVM.Nom, pizzaVM.Id))
+            {
+                ModelState.AddModelError("Nom", "Une autre pizza porte déjà ce nom");
+                return false;
+            }
+
+            if (MemesIngredients(pizzaVM.IdsIngredients, pizzaVM.Id))
+            {
+                ModelState.AddModelError("IdsIngredients", "Une autre pizza utilise exactement ces mêmes ingrédients");
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool NomPizzaExistant(string nomPizza, int id)
+        {
+            nomPizza = nomPizza.ToLower();
+            return pizzas.Any(p => p.Nom.ToLower() == nomPizza && p.Id != id);
+        }
+
+        private bool MemesIngredients(List<int> idsIngredients, int id)
+        {
+            return pizzas.Where(p => p.Id != id && p.Ingredients.Count() == idsIngredients.Count()).Any(p => p.Ingredients.All(i => idsIngredients.Contains(i.Id)));
         }
     }
 }
